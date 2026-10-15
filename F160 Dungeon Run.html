@@ -1,0 +1,669 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>F160 Dungeon Run</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: one centred column. HUD (hearts, floor, score) on top, a five-node floor map, then the room card with the question, lifelines and narrator. Single committed dark dungeon look. */
+:root {
+  --bg:#110d1c; --panel:#1c1530; --panel2:#271d44; --line:#4a3a7a; --ink:#efe6d0; --dim:#a99cc9;
+  --torch:#ff9b3d; --teal:#36e0c0; --red:#ff4d6d; --gold:#ffd166; --boss:#b46bff; --good:#3ddc97;
+  --f-display:"Pixelify Sans","Courier New",monospace; --f-body:"Nunito","Segoe UI",system-ui,sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.5 var(--f-body); font-weight:500; min-height:100vh;
+  background-image:radial-gradient(ellipse 60% 35% at 50% 0%, #3a2470 0%, transparent 70%), repeating-linear-gradient(0deg, transparent 0 31px, #ffffff06 31px 32px), repeating-linear-gradient(90deg, transparent 0 31px, #ffffff06 31px 32px);
+  background-attachment:fixed; }
+.wrap { max-width:840px; margin:0 auto; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px)); padding-block:1.1rem 3rem; }
+h1,h2,h3 { font-family:var(--f-display); font-weight:700; margin:0; line-height:1.1; text-wrap:balance; }
+button { font:inherit; font-weight:800; cursor:pointer; border:0; border-radius:6px; color:var(--ink); }
+:focus-visible { outline:3px solid var(--torch); outline-offset:2px; }
+[hidden] { display:none !important; }
+
+.brand { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:.9rem; }
+.logo { font-family:var(--f-display); font-size:1.3rem; color:var(--torch); font-weight:700; letter-spacing:.04em; }
+.logo small { display:block; font-family:var(--f-body); font-size:.7rem; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
+.best { font-size:.85rem; font-weight:800; color:var(--dim); } .best b { color:var(--gold); }
+
+.pix { border:3px solid var(--line); background:var(--panel); border-radius:4px; box-shadow:4px 4px 0 #000a; }
+.btn { background:var(--torch); color:#2a1500; padding:.65rem 1.3rem; box-shadow:0 4px 0 #a85a12; font-family:var(--f-display); font-size:1.05rem; font-weight:700; }
+.btn:active { transform:translateY(3px); box-shadow:0 1px 0 #a85a12; }
+.btn.alt { background:transparent; color:var(--torch); border:3px solid var(--torch); box-shadow:none; }
+.btn.teal { background:var(--teal); color:#022; box-shadow:0 4px 0 #1b8a77; }
+
+/* intro */
+.hero { text-align:center; padding:2rem .5rem; }
+.hero h1 { font-size:clamp(2.3rem,8vw,4rem); color:var(--torch); text-shadow:4px 4px 0 #000a; }
+.hero p { max-width:54ch; margin:1rem auto; }
+.row { display:flex; gap:.8rem; justify-content:center; flex-wrap:wrap; margin:1.2rem 0; }
+.cards { display:grid; gap:.8rem; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); text-align:left; margin-top:1.6rem; }
+.cards > div { padding:.8rem 1rem; }
+.cards b { font-family:var(--f-display); color:var(--teal); display:block; font-size:1.05rem; }
+.cards span { font-size:.9rem; color:var(--dim); }
+
+/* hud */
+.hud { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:.6rem; padding:.55rem .9rem; margin-bottom:.7rem; }
+.hearts { font-size:1.3rem; letter-spacing:.12em; color:var(--red); }
+.hearts .e { color:#5a3a55; }
+.hearts .sh { font-size:.72rem; letter-spacing:.05em; font-family:var(--f-body); font-weight:800; color:var(--teal); border:2px solid var(--teal); border-radius:4px; padding:0 .3rem; margin-left:.4rem; vertical-align:middle; }
+.floor { text-align:center; font-family:var(--f-display); font-size:1.05rem; color:var(--gold); }
+.floor small { display:block; font-family:var(--f-body); font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--dim); }
+.pts { text-align:right; font-family:var(--f-display); font-size:1.15rem; font-variant-numeric:tabular-nums; }
+.pts small { display:block; font-family:var(--f-body); font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--dim); }
+@media (max-width:560px){ .hud { grid-template-columns:1fr 1fr; } .floor { grid-column:1 / -1; order:3; } }
+
+.map { display:flex; align-items:center; gap:.3rem; margin:0 0 .9rem; }
+.node { flex:1; height:2.3rem; display:grid; place-items:center; font-family:var(--f-display); font-weight:700; font-size:.95rem; border:3px solid var(--line); background:var(--panel); color:var(--dim); border-radius:4px; }
+.node.done { background:#13463b; border-color:var(--good); color:var(--good); }
+.node.cur { background:var(--torch); border-color:var(--torch); color:#2a1500; }
+.node.boss { flex:1.6; border-color:var(--boss); color:var(--boss); letter-spacing:.06em; }
+.node.boss.cur { background:var(--boss); color:#1a0833; }
+.node.boss.done { background:#3a2470; color:var(--ink); }
+.node.skip { opacity:.55; border-style:dashed; }
+
+/* room card */
+.room { padding:1.1rem 1.2rem 1.3rem; }
+.enemy { display:flex; gap:.8rem; align-items:center; margin-bottom:.9rem; }
+.sprite { width:3rem; height:3rem; flex:none; display:grid; place-items:center; font-family:var(--f-display); font-weight:700; font-size:1.5rem; border:3px solid var(--torch); background:#2a1500; color:var(--torch); border-radius:4px; }
+.sprite.boss { border-color:var(--boss); background:#1a0833; color:var(--boss); }
+.enemy b { font-family:var(--f-display); font-size:1.2rem; display:block; line-height:1.1; }
+.enemy small { font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); font-weight:800; }
+.tagboss { color:var(--boss); }
+.scen { background:var(--panel2); border-left:4px solid var(--boss); padding:.6rem .85rem; border-radius:4px; font-size:.95rem; margin:0 0 .9rem; }
+.scen b { display:block; font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--boss); }
+.q-text { font-size:clamp(1.1rem,2.5vw,1.35rem); font-weight:800; line-height:1.35; margin:0 0 1rem; text-wrap:pretty; }
+.opts { display:grid; gap:.55rem; }
+.opt { display:flex; gap:.75rem; align-items:center; text-align:left; background:var(--panel2); border:3px solid var(--line); border-radius:4px; padding:.65rem .85rem; font-weight:700; transition:background .12s, transform .08s; }
+.opt .k { flex:none; width:1.9rem; height:1.9rem; display:grid; place-items:center; background:var(--torch); color:#2a1500; font-family:var(--f-display); font-weight:700; border-radius:3px; }
+.opt:hover:not(:disabled) { background:#34285a; transform:translateX(3px); }
+.opt:disabled { cursor:default; }
+.opt.struck { opacity:.28; text-decoration:line-through; }
+.opt.right { background:#13463b; border-color:var(--good); }
+.opt.wrong { background:#5c1f2b; border-color:var(--red); }
+.opt .tag { margin-left:auto; display:flex; gap:.35rem; align-items:center; flex:none; }
+.poll { height:.45rem; background:var(--gold); border-radius:3px; flex:none; transition:width .4s; }
+.av { width:1.6rem; height:1.6rem; border-radius:50%; display:grid; place-items:center; font-family:var(--f-display); font-size:.75rem; color:#fff; border:2px solid var(--ink); flex:none; }
+
+textarea { width:100%; min-height:10rem; background:var(--panel2); color:var(--ink); border:3px solid var(--line); border-radius:4px; padding:.75rem .9rem; font:inherit; line-height:1.5; resize:vertical; }
+textarea:read-only { opacity:.85; }
+.wmeta { display:flex; justify-content:space-between; gap:.5rem; flex-wrap:wrap; font-size:.8rem; color:var(--dim); margin:.35rem 0 .7rem; }
+.ms { background:var(--panel2); border:3px dashed var(--line); border-radius:4px; padding:.8rem .9rem; margin-top:.9rem; }
+.ms h4 { margin:0 0 .2rem; font-family:var(--f-display); font-size:1.05rem; color:var(--gold); }
+.ms p { margin:.1rem 0 .6rem; font-size:.86rem; color:var(--dim); }
+.ms label { display:flex; gap:.6rem; align-items:flex-start; padding:.4rem; border-radius:4px; cursor:pointer; font-size:.92rem; }
+.ms label:hover { background:#34285a; }
+.ms input { width:1.15rem; height:1.15rem; margin-top:.2rem; accent-color:var(--torch); flex:none; }
+.ms .auto { font-size:.66rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--teal); margin-left:.4rem; white-space:nowrap; }
+.ms .tally { font-weight:800; margin:.5rem 0 .6rem; } .ms .tally b { color:var(--gold); }
+
+.inv { margin-top:1rem; display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+.inv .none { font-size:.85rem; color:var(--dim); }
+.life { background:var(--panel2); border:3px solid var(--line); padding:.4rem .75rem; font-size:.88rem; border-radius:4px; }
+.life:hover:not(:disabled) { border-color:var(--teal); }
+.life:disabled { opacity:.38; cursor:default; }
+.life b { color:var(--teal); } .life i { font-style:normal; color:var(--gold); margin-left:.3rem; }
+.life.passive { border-style:dashed; }
+
+.say { display:flex; gap:.7rem; align-items:flex-start; margin-top:.9rem; min-height:2.6rem; }
+.bubble { background:var(--ink); color:#1a1426; border-radius:6px; padding:.5rem .85rem; font-size:.92rem; font-weight:700; }
+.bubble.nar { background:#2b2147; color:var(--ink); border:2px solid var(--line); }
+.reveal { margin-top:1rem; border-radius:4px; padding:.8rem 1rem; background:var(--panel2); border:3px dashed var(--line); font-size:.95rem; }
+.reveal .verdict { font-family:var(--f-display); font-size:1.25rem; margin-bottom:.2rem; }
+.reveal .verdict.ok { color:var(--good); } .reveal .verdict.no { color:var(--red); }
+.reveal .topic { font-size:.76rem; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin-top:.4rem; font-weight:800; }
+.reveal .note { margin-top:.4rem; color:var(--gold); font-weight:800; }
+.actions { display:flex; gap:.6rem; margin-top:.9rem; flex-wrap:wrap; }
+
+/* reward */
+.reward { padding:1.2rem; text-align:center; }
+.reward h2 { color:var(--boss); font-size:1.8rem; }
+.picks { display:grid; gap:.8rem; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); margin-top:1.2rem; text-align:left; }
+.pick { background:var(--panel2); border:3px solid var(--line); border-radius:4px; padding:.9rem 1rem; color:var(--ink); text-align:left; }
+.pick:hover { border-color:var(--torch); transform:translateY(-3px); }
+.pick b { font-family:var(--f-display); font-size:1.15rem; color:var(--teal); display:block; }
+.pick span { font-size:.88rem; color:var(--dim); font-weight:500; display:block; margin-top:.2rem; }
+.pick em { font-style:normal; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); }
+
+/* end */
+.end { text-align:center; padding:1.5rem 0; }
+.end h2 { font-size:clamp(1.8rem,6vw,2.8rem); }
+.end h2.win { color:var(--gold); } .end h2.lose { color:var(--red); }
+.score { font-family:var(--f-display); font-size:clamp(2.6rem,9vw,4.4rem); color:var(--torch); margin:.3rem 0; font-variant-numeric:tabular-nums; }
+.stats { display:flex; gap:.7rem; justify-content:center; flex-wrap:wrap; margin:.8rem 0 1.2rem; }
+.stat { padding:.5rem .9rem; min-width:7rem; }
+.stat b { display:block; font-family:var(--f-display); font-size:1.4rem; color:var(--teal); }
+.stat span { font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); font-weight:800; }
+.review { text-align:left; max-width:760px; margin:1.6rem auto 0; }
+.review h3 { color:var(--gold); font-size:1.15rem; margin-bottom:.6rem; }
+.rv { padding:.7rem 1rem; margin-bottom:.6rem; font-size:.93rem; }
+.rv .t { font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--torch); font-weight:800; }
+.rv b { display:block; margin:.15rem 0; } .rv ul { margin:.3rem 0 0; padding-left:1.1rem; } .rv li { margin:.15rem 0; }
+.foot { text-align:center; color:var(--dim); font-size:.8rem; margin-top:2.2rem; } .foot a { color:var(--torch); }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+
+<div class="wrap">
+ <div class="brand">
+  <div class="logo">F160 DUNGEON RUN<small>Fundamentals of application development</small></div>
+  <div class="best" id="best"></div>
+ </div>
+
+ <section id="intro" class="hero">
+  <h1>Descend. Revise. Survive.</h1>
+  <p>Three floors of five rooms each. Four rooms are multiple-choice monsters and the fifth is a boss that you answer in writing, just like the exam. You start with three hearts and no help at all.</p>
+  <div class="row">
+   <button class="btn" id="start" type="button">Enter the dungeon</button>
+   <button class="btn alt" id="cont" type="button" hidden>Continue run</button>
+  </div>
+  <div class="cards">
+   <div class="pix"><b>Hearts</b><span>A wrong answer costs a heart. A failed boss costs two. Run out and the run is over.</span></div>
+   <div class="pix"><b>Bosses</b><span>Written answers marked against a mark scheme. Defeat one to heal a heart and choose a new lifeline.</span></div>
+   <div class="pix"><b>Lifelines</b><span>None at the start. Each boss offers three to pick from: Peek, Ask the class, 50:50, Shield, Second Wind or Cheat sheet.</span></div>
+   <div class="pix"><b>Saves</b><span>Your run saves as you go, so you can close the page and continue later.</span></div>
+  </div>
+ </section>
+
+ <section id="run" hidden>
+  <div class="hud pix">
+   <div class="hearts" id="hearts" aria-label="Hearts"></div>
+   <div class="floor" id="floor"></div>
+   <div class="pts"><small>Score</small><span id="score">0</span></div>
+  </div>
+  <div class="map" id="map" aria-label="Floor map"></div>
+  <div class="room pix" id="room">
+   <div class="enemy"><div class="sprite" id="sprite"></div><div><small id="etag"></small><b id="ename"></b></div></div>
+   <div class="scen" id="wscen" hidden></div>
+   <p class="q-text" id="qtext"></p>
+   <div class="opts" id="opts"></div>
+   <div id="written" hidden>
+    <textarea id="wtext" placeholder="Write your answer here. Use full sentences and link your points to the scenario." aria-label="Your written answer"></textarea>
+    <div class="wmeta"><span id="wcount">0 words</span><span id="wneed"></span></div>
+    <button class="btn teal" id="wsubmit" type="button">Strike the boss</button>
+    <div class="ms" id="wms" hidden></div>
+   </div>
+   <div class="inv" id="inv"></div>
+   <div class="say" id="say"></div>
+   <div class="reveal" id="reveal" hidden></div>
+   <div class="actions" id="actions"></div>
+  </div>
+ </section>
+
+ <section id="rewardSec" class="reward pix" hidden>
+  <h2 id="rwTitle">Boss defeated!</h2>
+  <p id="rwText"></p>
+  <div class="picks" id="picks"></div>
+ </section>
+
+ <section id="end" class="end" hidden>
+  <h2 id="endTitle"></h2>
+  <div class="score" id="endScore"></div>
+  <p id="endMsg"></p>
+  <div class="stats" id="stats"></div>
+  <button class="btn" id="again" type="button">New run</button>
+  <div class="review" id="review"></div>
+ </section>
+
+ <div class="foot">Questions drawn from the F160 unit content. Revise the full topics in the <a href="https://claude.ai/artifact/F5UJ8T5hsaLMyavJWNQGhf">F160 Revision Guide</a>.</div>
+</div>
+
+<script>
+(function(){
+  /* Multiple choice, levels 1-10: [topic, question, correct, wrong, wrong, wrong, explanation] */
+  var BANK=[
+   [[1,"Every application is also a...","program","operating system","website","piece of hardware","An application is a program designed for end users. All applications are programs, but not all programs are applications."],
+    [1,"Which of these is a network operating system?","Cisco IOS","Spotify","WinRAR","Candy Crush","Cisco IOS runs on routers and switches. The others are applications."],
+    [1,"Netflix and Spotify are which application type?","Entertainment","Productivity","Protection and utility","Educational","They deliver video and music for leisure, so they are entertainment applications."]],
+   [[1,"Software whose source code is freely available to view, modify and share is called...","open","closed","embedded","shareware","Open software publishes its source code. Linux is the classic example."],
+    [1,"Which category is distributed as a free trial, with payment expected for continued use?","Shareware","Freeware","Open software","Embedded software","Shareware is a trial with limits. Using it after the trial without paying breaks copyright."],
+    [2,"Which development model finishes each phase completely before the next begins?","Waterfall","Agile","Spiral","RAD","Waterfall is linear and sequential, with no going back."]],
+   [[1,"Ready-made software sold to many customers as it is, is called...","off-the-shelf","bespoke","custom off-the-shelf","embedded","Off-the-shelf software is cheap and available straight away, but offers little customisation."],
+    [3,"A Gantt chart shows...","tasks as bars along a timeline","data moving between entities","strengths and weaknesses of a business","how the finished interface will look","Gantt charts display start, end and duration of tasks against time."],
+    [4,"Which requirements-gathering method involves watching users do their real work?","Observation","Questionnaire","Document analysis","Focus group","Observation shows what people actually do, although they may act differently when watched."]],
+   [[4,"Which is a functional requirement?","Users must be able to log in","The system must respond in under two seconds","The system must be very secure","The system must cope with 10,000 users","Functional requirements say what the system must do. The others describe how well it performs, so they are non-functional."],
+    [2,"Which implementation method runs the old and new systems side by side?","Parallel","Phased","Big bang","Evolutionary","Parallel gives a safety net and lets outputs be compared, but it is costly and doubles the workload."],
+    [5,"Which type of interaction uses typed commands?","Command line","Touch","Audio","Gesture","A command line interface is fast and precise for experts but has a steep learning curve."]],
+   [[3,"The critical path is...","the longest chain of dependent tasks","the shortest chain of tasks","the most expensive task","the task with the most staff","Any delay to a task on the critical path delays the whole project."],
+    [2,"Which model includes risk analysis in every loop?","Spiral","Waterfall","Rapid throwaway prototyping","Big bang","The Spiral model suits large, high-risk projects but is expensive and complex."],
+    [5,"Which diagram shows one process for the whole system, its external entities and the data flows between them?","Level 0 data flow diagram","Level 1 data flow diagram","Wireframe","Flowchart","The level 0 DFD is the context view. Level 1 breaks the process down and adds data stores."]],
+   [[3,"A non-critical task has 2 days of float. This means...","it can slip by 2 days without delaying the project","it must be finished 2 days early","it takes 2 days longer than the critical path","it needs 2 extra staff","Float is the slack a task has before it affects the end date."],
+    [1,"Why is Linux often chosen for servers?","It is stable, secure and customisable","It is the only OS that can host websites","It is closed source so nobody can inspect it","It is only available as shareware","Linux is open, flexible and stable, so it suits servers. Desktop choice then follows the tools users need."],
+    [2,"What is the main disadvantage of big bang implementation?","There is no fallback if the new system fails","It takes the longest","Two systems must be maintained","It can only be used on small systems","Everything switches at once. Thorough testing and training are essential."]],
+   [[2,"A hospital needs a safety-critical system with fixed, stable requirements. Which model fits best?","Waterfall","Evolutionary prototyping","Rapid throwaway prototyping","Agile","Fixed requirements and strict documentation and sign-off suit the linear Waterfall model."],
+    [4,"Top-down decomposition means...","starting with the whole system and breaking it into smaller parts","building small components first and combining them","ignoring irrelevant detail","spotting repeated patterns","Bottom-up is the opposite. Abstraction ignores irrelevant detail and pattern recognition spots repeats."],
+    [6,"Which job role acts as the bridge between business needs and the technical team?","Systems analyst","User interface designer","Mobile application designer","Project manager","Systems analysts study the business need and the current system, and gather requirements."]],
+   [[6,"Which statement about UX and UI is correct?","UX covers the whole experience of using the app; UI is the visual design of its screens","UX and UI are the same job","UX is only about colours and fonts","UI is only about research","UX focuses on user needs and the journey. UI designs layout, colour and typography."],
+    [1,"A user keeps using shareware after the trial ends without paying. This...","breaks copyright law","is legal because shareware is free","is allowed for personal use","makes the software open source","Shareware is a trial, not free software. Continued use needs a licence."],
+    [3,"Which area of legislation covers rules on email marketing?","Electronic communications","Copyright","Data protection","Health and safety","Copyright covers intellectual property. Data protection covers personal data. You do not need the details of specific Acts."]],
+   [[2,"Which statement about testing is correct?","It also validates requirements and checks usability","It only finds bugs","It only happens after development","Automation completely replaces manual testing","Testing is most effective when included throughout the lifecycle, and humans are still needed for usability and exploratory testing."],
+    [3,"The accuracy of a PERT chart depends mainly on...","the quality of its time estimates","the number of tasks","the colours used","the size of the team","A PERT chart is only as good as the estimates put into it."],
+    [5,"Which pair correctly describes AR and VR?","AR overlays digital content on the real world; VR is a fully virtual environment","AR is fully virtual; VR overlays content on the real world","They are the same thing","AR needs a headset; VR does not","Mixed reality blends the two, so real and virtual objects can interact."]],
+   [[1,"A small retailer with a tight budget needs standard accounting software. Which choice is best and why?","Off-the-shelf, because it is cheap, available immediately and well supported","Bespoke, because it is the cheapest option","Custom off-the-shelf, because it needs no changes at all","Embedded, because it can be updated easily","Standard needs on a small budget point to off-the-shelf. Bespoke costs more and takes longer."],
+    [3,"A project goes ahead with no plan. What is the most likely result?","Overspend, missed deadlines and an unclear scope","A lower cost with no downsides","Faster delivery with higher quality","The client needs fewer meetings","Without a plan, resources, time and scope drift, and the product may not meet the need."],
+    [2,"A client's requirements keep changing and they are available every week. Which approach suits them best?","Agile, with short sprints and constant feedback","Waterfall, with sign-off at the start","Big bang implementation","Bottom-up design","Agile copes with change and relies on close client involvement. Big bang is an implementation method, not a development model."]]
+  ];
+
+  /* Written, levels 11-15. Each point has a label (shown in the mark scheme) and regex keywords used to auto-tick it. */
+  var WBANK=[
+   [ /* level 11: 3-4 mark points-based */
+    {topic:3,scenario:"",text:"Explain two reasons why a company should plan an application development project.",marks:4,need:3,tip:"Give two reasons and develop each one with a 'because' to reach 4 marks.",
+     points:[
+      {t:"Keeps the project within budget by estimating and controlling costs",k:["budget","cost","money","overspen","afford"]},
+      {t:"Helps meet deadlines through a schedule with milestones",k:["deadline","schedul","milestone","on time","too late","delay"]},
+      {t:"Allocates people, tools and skills so resources are not wasted",k:["resource","staff","people","team","skills","tools"]},
+      {t:"Identifies risks and constraints early so they can be managed",k:["risk","constraint","problem","issue"]},
+      {t:"Defines scope and success criteria so everyone agrees what finished means",k:["scope","success criteria","objective","goal","expectation","requirement"]},
+      {t:"Shows progress so problems are spotted sooner",k:["progress","monitor","track","measure"]}]},
+    {topic:1,scenario:"",text:"Describe three characteristics of a bespoke application.",marks:3,need:2,tip:"Three separate characteristics. Each point is one mark.",
+     points:[
+      {t:"Built from scratch for one client's exact requirements",k:["scratch","one client","single client","specific","tailor","custom","exact","unique","individual"]},
+      {t:"Higher cost than ready-made software",k:["expensive","cost","price","costly"]},
+      {t:"Longer development time",k:["longer","takes time","time-consuming","time consuming","slow","months"]},
+      {t:"Integrates with the client's existing systems",k:["integrat","existing system","fits in","compatible"]},
+      {t:"The client depends on the developer for support and changes",k:["depend","support","developer","maintain","maintenance"]},
+      {t:"Can give the client a competitive advantage",k:["competitive","advantage","stand out","unique feature"]}]}
+   ],
+   [ /* level 12 */
+    {topic:4,scenario:"",text:"Explain the difference between functional and non-functional requirements. Give an example of each.",marks:4,need:3,tip:"Define each type, then give an example of each.",
+     points:[
+      {t:"Functional requirements state what the system must do",k:["what the (system|app|application|software) (must|should|has to|needs to|will) do","what it (must|should|does)","tasks","actions","behaviou?r"]},
+      {t:"A valid functional example, such as user login or payment processing",k:["log ?in","payment","checkout","search","register","password","basket","book"]},
+      {t:"Non-functional requirements describe how well the system performs, its qualities",k:["how well","how the (system|app)","performance","quality","qualities","how (it|they) (perform|work)","standard"]},
+      {t:"A valid non-functional example, such as speed, security, scalability or usability",k:["speed","fast","secur","scalab","usab","reliab","response time","accessib","availab"]}]},
+    {topic:3,scenario:"",text:"Describe how a Gantt chart and critical path analysis would each help a project manager.",marks:4,need:3,tip:"Cover both tools. Say what each shows and how the manager uses it.",
+     points:[
+      {t:"A Gantt chart shows tasks as bars along a timeline",k:["bar","timeline","time line","schedule"]},
+      {t:"It lets the manager monitor progress against deadlines",k:["progress","monitor","track","deadline","on schedule"]},
+      {t:"Critical path analysis finds the longest chain of dependent tasks",k:["longest","critical path","dependent","sequence"]},
+      {t:"It shows which tasks cannot be delayed without delaying the whole project",k:["delay","cannot be late","slip","critical tasks?","end date"]},
+      {t:"It shows which tasks have float, so resources can be moved around",k:["float","slack","spare time","non-critical","move resources"]}]}
+   ],
+   [ /* level 13 */
+    {topic:2,scenario:"",text:"A client is unsure what their application should look like. Explain why a rapid throwaway prototype might suit them, and give one disadvantage.",marks:4,need:3,tip:"Two benefits plus one disadvantage, each explained.",
+     points:[
+      {t:"A quick working model is built early",k:["quick","early","fast","rapid","working","mock"]},
+      {t:"The client can try it and give feedback",k:["feedback","try","see it","test it","review","look at"]},
+      {t:"It clarifies unclear requirements and reduces misunderstandings",k:["clarif","requirement","misunderstand","understand","unclear","what they want"]},
+      {t:"It is thrown away afterwards, so the final system is built properly",k:["throw","discard","scrap","afterwards"]},
+      {t:"Disadvantage: effort, time and money spent on something that is discarded",k:["wasted","waste","effort","cost","time spent","extra"]},
+      {t:"Disadvantage: the client may want to keep a poorly built prototype",k:["keep","poor quality","not built properly","unfinished"]}]},
+    {topic:2,scenario:"",text:"Compare parallel and big bang implementation.",marks:4,need:3,tip:"A comparison needs both methods and at least one clear contrast.",
+     points:[
+      {t:"Parallel runs the old and new systems side by side for a period",k:["side by side","both (systems )?(run|running)","at the same time","simultaneous","alongside","together"]},
+      {t:"Parallel gives a fallback if the new system fails, and outputs can be compared",k:["fallback","safety","back ?up","compare","safe","if (it|the new system) fails"]},
+      {t:"Parallel is costly and doubles the workload",k:["cost","expensive","double","twice","more work","two systems","workload"]},
+      {t:"Big bang replaces the old system all at once",k:["all at once","one go","immediate","straight away","completely replace","instantly","whole system"]},
+      {t:"Big bang is quicker and cheaper but high risk, with no fallback",k:["risk","no fallback","nothing to fall back","quick","cheap","fail"]}]}
+   ],
+   [ /* level 14: 6 marks, levels of response style, scenario */
+    {topic:2,scenario:"Brightside Bakery wants an app so customers can order online and the kitchen can see orders. The owner has a small budget and wants it live in three months. She is not sure which features she needs.",text:"Discuss which software development model would be most suitable for this project.",marks:6,need:4,tip:"Top-level answers weigh a model against the scenario details and reach a justified conclusion.",
+     points:[
+      {t:"Recommends an iterative model such as Agile, RAD, evolutionary prototyping or incremental",k:["agile","\\brad\\b","rapid application","evolutionary","incremental","iterative","prototyp"]},
+      {t:"Links to the owner being unsure of the features: feedback shapes the requirements",k:["unsure","not sure","unclear","changing","change","feedback","requirement"]},
+      {t:"Links to the small budget or three-month deadline: working parts delivered early",k:["budget","3 months","three months","deadline","time","sprint","early"]},
+      {t:"Explains why Waterfall is unsuitable: fixed requirements, late testing, costly changes",k:["waterfall","fixed","inflexible","late","sign.?off"]},
+      {t:"Gives a disadvantage: needs the owner's time, scope creep, little documentation",k:["scope creep","documentation","owner'?s time","time from the owner","involve","availab","hard to (predict|fix)"]},
+      {t:"Gives a clear, justified conclusion",k:["therefore","overall","in conclusion","most suitable","best (model|option|choice)","recommend","should (use|choose)"]}]},
+    {topic:4,scenario:"St Mary's Hospital wants an app for patients to book and manage appointments. Users include busy nurses, receptionists and elderly patients, and the system will hold sensitive patient data.",text:"Discuss the methods the developer could use to gather the client's requirements.",marks:6,need:4,tip:"Name methods, weigh each against the hospital's users, and finish with a recommendation.",
+     points:[
+      {t:"Interviews with managers and staff give detailed answers and allow follow-up questions",k:["interview"]},
+      {t:"Questionnaires reach many patients cheaply, but response can be low",k:["questionnaire","survey"]},
+      {t:"Observation or shadowing shows how receptionists actually book appointments",k:["observ","shadow"]},
+      {t:"Document analysis of current forms and records shows the data needed",k:["document","forms?","records"]},
+      {t:"Staff are busy, so some methods disrupt them more than others",k:["busy","disrupt","intrusive","interrupt","time"]},
+      {t:"Elderly patients may struggle with online methods, so another route is needed for them",k:["elderly","older","paper","struggle","accessib","focus group"]},
+      {t:"Sensitive data means security and privacy requirements must be captured",k:["sensitive","privacy","security","confidential","data protection"]},
+      {t:"Recommends combining methods because one alone misses detail",k:["combin","mix","more than one","several","variety","both"]}]}
+   ],
+   [ /* level 15: 9 marks */
+    {topic:5,scenario:"FitTrack is a start-up building a fitness app for smartphones and smartwatches. Users will glance at workout data on a small watch screen while exercising, and plan sessions on their phone.",text:"Evaluate the visual design and interaction choices the design team should make for this app.",marks:9,need:6,tip:"For 9 marks: several developed points, both benefits and drawbacks, links to both devices, and a final judgement.",
+     points:[
+      {t:"Colours: strong contrast and consistent meaning, with accessibility in mind (colour blindness, WCAG)",k:["contrast","colou?r ?blind","wcag","accessib","colou?rs?"]},
+      {t:"Typography: large, readable text on the small watch screen, scalable on the phone",k:["font","text size","typograph","large","readable","legib","size"]},
+      {t:"Location hierarchy: key data such as heart rate placed prominently, visible without scrolling",k:["hierarch","prominent","top","without scroll","key (data|information)","most important","cent(re|er)"]},
+      {t:"Touch interaction suits both phone and watch",k:["touch","tap","swipe"]},
+      {t:"Audio, voice or gesture help when hands are busy exercising",k:["voice","audio","gesture","hands.?free","speak","movement"]},
+      {t:"Drawbacks of an interaction type: sweaty fingers, noise, accidental touches, tiny targets",k:["sweat","accident","noise","small (buttons|targets)","fatigue","imprecise","privacy"]},
+      {t:"Help and error messages are short, clear and say how to fix the problem",k:["error","help message","message"]},
+      {t:"Brand, audience and client needs shape the style",k:["brand","audience","client","target","user needs"]},
+      {t:"Tests designs with real users and gives a justified conclusion",k:["test","feedback","user testing","conclusion","overall","recommend","therefore","most important"]}]},
+    {topic:3,scenario:"Oakfield School wants a bespoke attendance app to replace paper registers. It must be ready for the start of next term, the budget is fixed, and the app will hold data about pupils under 18.",text:"Evaluate how important planning is for this project and recommend how it should be planned.",marks:9,need:6,tip:"For 9 marks: cover several planning considerations and tools, weigh them against the school's situation, and justify a recommendation.",
+     points:[
+      {t:"Budget is fixed: planning estimates and controls costs so the project does not overspend",k:["budget","cost","overspen","afford"]},
+      {t:"Time: a hard deadline at the start of term needs a realistic schedule with milestones",k:["deadline","term","time","schedul","milestone","late"]},
+      {t:"Legislation: pupils' personal data means data protection must be planned in",k:["data protection","gdpr","personal data","legislat","legal","law","pupil","children"]},
+      {t:"Resources: enough developers, skills and testing time must be available",k:["resource","developer","skill","staff","people","team"]},
+      {t:"Success criteria: measurable targets, such as all registers recorded digitally",k:["success criteria","measurable","target","objective","criteria"]},
+      {t:"Tool: a Gantt chart shows the schedule against the deadline",k:["gantt"]},
+      {t:"Tool: critical path analysis or a PERT chart shows which tasks cannot slip",k:["critical path","cpa","pert","cpm","dependenc"]},
+      {t:"Consequence of not planning: overspend, missed deadline, unclear scope, a product that misses the need",k:["without (a )?plan","not plan","no plan","consequence","overspen","miss","unclear scope"]},
+      {t:"Gives a justified conclusion or recommendation",k:["therefore","overall","in conclusion","recommend","most important","should"]}]}
+   ]
+  ];
+
+
+  var MATES=[{n:"Priya",c:"#e0559a"},{n:"Marcus",c:"#2f9e6a"},{n:"Wei",c:"#e08a1e"},{n:"Chloe",c:"#7c5cff"}];
+  var TOPIC={1:"Topic 1 · Types of software",2:"Topic 2 · Development models",3:"Topic 3 · Planning projects",4:"Topic 4 · Application design scoping",5:"Topic 5 · Human computer interface",6:"Topic 6 · Job roles and skills"};
+  var MONS={1:"Software Slime",2:"Model Mimic",3:"Gantt Ghoul",4:"Requirement Rat",5:"Interface Imp",6:"Role Wraith"};
+  var FLOORS=[
+    {name:"The Server Cellar",boss:"The Spec Golem",tiers:[0,1,2,3]},
+    {name:"The Dev Floor",boss:"The Deadline Dragon",tiers:[4,5,6,7]},
+    {name:"The Boardroom",boss:"The Chief Examiner",tiers:[7,8,9,9]}];
+  var BOSSPOOL=[WBANK[0].concat(WBANK[1]),WBANK[2].concat(WBANK[3]),WBANK[4]];
+  var LIFE={
+    peek:{n:"Peek",d:"A classmate tells you their answer, or hints at a mark-scheme point you missed."},
+    poll:{n:"Ask the class",d:"A poll of 24 classmates. Multiple-choice rooms only."},
+    fifty:{n:"50:50",d:"Removes two wrong answers. Multiple-choice rooms only."},
+    shield:{n:"Shield",d:"Blocks the next hit you would take, in any room."},
+    wind:{n:"Second Wind",d:"Passive. If you would fall, you get back up with 1 heart.",passive:true},
+    sheet:{n:"Cheat sheet",d:"Boss rooms only. Reveals two mark-scheme points."}};
+  var LIFEIDS=["peek","poll","fifty","shield","wind","sheet"];
+  var MAXH=5, START_H=3;
+
+  var $=function(id){return document.getElementById(id);};
+  var st, BEST="f160-run-best-v1", RUN="f160-run-save-v1";
+  function best(){ try{ return parseInt(localStorage.getItem(BEST)||"0",10)||0; }catch(e){ return 0; } }
+  function saveBest(v){ try{ if(v>best()) localStorage.setItem(BEST,String(v)); }catch(e){} drawBest(); }
+  function drawBest(){ $("best").innerHTML="Best run: <b>"+best().toLocaleString()+"</b>"; }
+  function saveRun(){ try{ localStorage.setItem(RUN,JSON.stringify(st)); }catch(e){} }
+  function clearRun(){ try{ localStorage.removeItem(RUN); }catch(e){} }
+  function loadRun(){ try{ var r=JSON.parse(localStorage.getItem(RUN)||"null"); if(r&&r.qs&&r.qs.length===15&&r.hearts>0) return r; }catch(e){} return null; }
+  function shuffle(a){ for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;} return a; }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+  function av(m){ return '<span class="av" style="background:'+m.c+'" title="'+m.n+'">'+m.n[0]+'</span>'; }
+  function depth(){ return st.floor*5+st.room; }
+  function cur(){ return st.qs[depth()]; }
+  function isBoss(){ return st.room===4; }
+  drawBest();
+
+  function newRun(){
+    var qs=[], used={};
+    FLOORS.forEach(function(f,fi){
+      f.tiers.forEach(function(t){
+        var pool=BANK[t], idx=[];
+        pool.forEach(function(_,i){ if(!used[t+":"+i]) idx.push(i); });
+        if(!idx.length) idx=pool.map(function(_,i){return i;});
+        var pick=idx[Math.floor(Math.random()*idx.length)]; used[t+":"+pick]=1;
+        var raw=pool[pick], opts=shuffle([raw[2],raw[3],raw[4],raw[5]]);
+        qs.push({kind:"mc",topic:raw[0],text:raw[1],opts:opts,answer:opts.indexOf(raw[2]),why:raw[6]});
+      });
+      var bp=BOSSPOOL[fi], w=bp[Math.floor(Math.random()*bp.length)];
+      qs.push({kind:"w",topic:w.topic,scenario:w.scenario,text:w.text,marks:w.marks,need:w.need,tip:w.tip,points:w.points});
+    });
+    st={floor:0,room:0,hearts:START_H,score:0,streak:0,cleared:0,defeated:0,shield:false,
+        inv:{peek:0,poll:0,fifty:0,shield:0,wind:0,sheet:0},qs:qs,missed:[],after:null};
+    resetQ();
+  }
+  function resetQ(){ st.locked=false; st.struck=[]; st.mate=null; st.pollRes=null; st.sheetShown=null; }
+
+  /* ---------- HUD ---------- */
+  function hud(){
+    var h="";
+    for(var i=0;i<MAXH;i++) h+= i<st.hearts?"♥":'<span class="e">♥</span>';
+    if(st.shield) h+='<span class="sh">SHIELD</span>';
+    $("hearts").innerHTML=h;
+    $("floor").innerHTML='<small>Floor '+(st.floor+1)+' of 3</small>'+esc(FLOORS[st.floor].name);
+    $("score").textContent=st.score.toLocaleString();
+    var m="";
+    for(var r=0;r<5;r++){
+      var cls="node"+(r===4?" boss":"")+(r<st.room?" done":"")+(r===st.room?" cur":"");
+      m+='<div class="'+cls+'">'+(r===4?"BOSS":(r+1))+'</div>';
+    }
+    $("map").innerHTML=m;
+  }
+
+  function inventory(){
+    var q=cur(), written=q.kind==="w", h="", any=false;
+    LIFEIDS.forEach(function(id){
+      var n=st.inv[id]; if(!n) return; any=true;
+      var def=LIFE[id], dis=st.locked||def.passive;
+      if(id==="poll"||id==="fifty") dis=dis||written;
+      if(id==="sheet") dis=dis||!written;
+      if(id==="shield") dis=dis||st.shield;
+      h+='<button type="button" class="life'+(def.passive?" passive":"")+'" data-l="'+id+'" title="'+esc(def.d)+'"'+(dis?" disabled":"")+'><b>'+def.n+'</b><i>×'+n+'</i>'+(def.passive?" (auto)":"")+'</button>';
+    });
+    $("inv").innerHTML=any?h:'<span class="none">No lifelines yet. Defeat a floor boss to choose one.</span>';
+  }
+
+  function narrate(msg){ $("say").innerHTML='<span class="av" style="background:#ff9b3d;color:#2a1500">!</span><div class="bubble nar">'+esc(msg)+'</div>'; }
+
+  /* ---------- Room ---------- */
+  function showQ(){
+    resetQ(); st.after=null;
+    var q=cur(), boss=isBoss(), written=q.kind==="w", f=FLOORS[st.floor];
+    hud();
+    $("sprite").className="sprite"+(boss?" boss":""); $("sprite").textContent=boss?"B":MONS[q.topic][0];
+    $("etag").innerHTML=boss?'<span class="tagboss">Boss · '+q.marks+' marks · written</span>':"Room "+(st.room+1)+" of 5 · "+TOPIC[q.topic];
+    $("ename").textContent=boss?f.boss:MONS[q.topic];
+    $("qtext").textContent=q.text;
+    $("wscen").hidden=!(written&&q.scenario);
+    if(written&&q.scenario) $("wscen").innerHTML="<b>Scenario</b>"+esc(q.scenario);
+    $("opts").hidden=written; $("written").hidden=!written;
+    if(written){
+      $("wtext").value=""; $("wtext").readOnly=false; $("wcount").textContent="0 words";
+      $("wneed").textContent="Pass mark: "+q.need+" of "+q.marks+" · a failed boss costs 2 hearts";
+      $("wsubmit").hidden=false; $("wms").hidden=true; $("wms").innerHTML="";
+    } else drawOpts();
+    $("reveal").hidden=true; $("actions").innerHTML="";
+    inventory();
+    if(st.room===0&&st.floor===0) narrate("You enter the Server Cellar with three hearts and no lifelines. Answer well.");
+    else if(st.room===0) narrate("Floor "+(st.floor+1)+": "+f.name+". Monsters here are tougher.");
+    else if(boss) narrate(f.boss+" blocks the stairs. Answer in writing and mark yourself against the scheme.");
+    else narrate(MONS[q.topic]+" appears. Pick the right answer.");
+    saveRun();
+  }
+
+  function drawOpts(reveal,pick){
+    var q=cur(), L="ABCD", h="";
+    q.opts.forEach(function(o,i){
+      var cls="opt";
+      if(st.struck.indexOf(i)>-1) cls+=" struck";
+      if(reveal){ if(i===q.answer) cls+=" right"; else if(i===pick) cls+=" wrong"; }
+      var tag="";
+      if(st.mate && st.mate.pick===i) tag+=av(st.mate.m);
+      if(st.pollRes) tag+='<span class="poll" style="width:'+Math.max(4,Math.round(st.pollRes[i]*0.9))+'px"></span><span style="font-size:.8rem;color:var(--dim)">'+st.pollRes[i]+'%</span>';
+      h+='<button type="button" class="'+cls+'" data-i="'+i+'"'+((reveal||st.struck.indexOf(i)>-1)?" disabled":"")+'><span class="k">'+L[i]+'</span><span>'+esc(o)+'</span><span class="tag">'+tag+'</span></button>';
+    });
+    $("opts").innerHTML=h;
+  }
+
+  function acc(){ return Math.max(0.35,0.92-depth()*0.04); }
+  function mateAnswer(){
+    var q=cur();
+    if(Math.random()<acc()) return q.answer;
+    var w=[0,1,2,3].filter(function(i){return i!==q.answer && st.struck.indexOf(i)<0;});
+    return w[Math.floor(Math.random()*w.length)];
+  }
+  function hits(q,text){
+    return q.points.map(function(p){ return p.k.some(function(r){ try{ return new RegExp(r,"i").test(text); }catch(e){ return false; } }); });
+  }
+
+  $("inv").addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b||b.disabled||st.locked) return;
+    var l=b.getAttribute("data-l"), q=cur();
+    if(!st.inv[l]) return;
+    if(l==="peek"){
+      var m=MATES[Math.floor(Math.random()*MATES.length)];
+      if(q.kind==="w"){
+        var hh=hits(q,$("wtext").value), miss=[];
+        q.points.forEach(function(p,i){ if(!hh[i]) miss.push(p); });
+        var arr=miss.length?miss:q.points, pk=arr[Math.floor(Math.random()*arr.length)];
+        $("say").innerHTML=av(m)+'<div class="bubble"><b>'+m.n+':</b> Have you covered this? '+esc(pk.t)+'.</div>';
+      } else {
+        var p=mateAnswer(), conf=acc()>0.7?"I'm fairly sure it's ":"Hmm, I'd guess ";
+        st.mate={m:m,pick:p};
+        $("say").innerHTML=av(m)+'<div class="bubble"><b>'+m.n+':</b> '+conf+"ABCD"[p]+'.</div>';
+        drawOpts();
+      }
+    } else if(l==="poll"){
+      var votes=[0,0,0,0];
+      for(var k=0;k<24;k++) votes[mateAnswer()]++;
+      st.pollRes=votes.map(function(v){return Math.round(v*100/24);});
+      $("say").innerHTML='<span class="av" style="background:#4c8dff">24</span><div class="bubble">The class has voted. They are not always right.</div>';
+      drawOpts();
+    } else if(l==="fifty"){
+      st.struck=shuffle([0,1,2,3].filter(function(i){return i!==q.answer;})).slice(0,2);
+      if(st.mate && st.struck.indexOf(st.mate.pick)>-1) st.mate=null;
+      narrate("Two wrong answers vanish."); drawOpts();
+    } else if(l==="shield"){
+      st.shield=true; narrate("A shield of notes surrounds you. It will block the next hit.");
+    } else if(l==="sheet"){
+      var pts=shuffle(q.points.slice()).slice(0,2);
+      $("say").innerHTML='<span class="av" style="background:#ffd166;color:#2a1500">?</span><div class="bubble">Cheat sheet: '+pts.map(function(x){return esc(x.t);}).join(" · ")+'</div>';
+    }
+    st.inv[l]--; hud(); inventory(); saveRun();
+  });
+
+  $("opts").addEventListener("click",function(e){
+    var b=e.target.closest(".opt"); if(!b||st.locked) return;
+    answerMC(parseInt(b.getAttribute("data-i"),10));
+  });
+  document.addEventListener("keydown",function(e){
+    if($("run").hidden||st.locked||e.ctrlKey||e.metaKey||e.altKey) return;
+    if(cur().kind!=="mc") return;
+    var k="abcd".indexOf(e.key.toLowerCase());
+    if(k>-1 && e.key.length===1 && st.struck.indexOf(k)<0) answerMC(k);
+  });
+
+  /* ---------- Damage ---------- */
+  function damage(n){
+    if(st.shield){ st.shield=false; return {dead:false,note:"Your shield absorbed the hit. No hearts lost."}; }
+    st.hearts-=n;
+    if(st.hearts<=0){
+      if(st.inv.wind>0){ st.inv.wind--; st.hearts=1; return {dead:false,note:"Second Wind! You get back up with 1 heart."}; }
+      st.hearts=0; return {dead:true,note:"You have no hearts left."};
+    }
+    return {dead:false,note:"You lose "+n+(n===1?" heart.":" hearts.")};
+  }
+
+  /* ---------- Multiple choice ---------- */
+  function answerMC(i){
+    var q=cur(); st.locked=true; inventory();
+    var ok=i===q.answer; drawOpts(true,i);
+    var pts=0,note="",dead=false;
+    if(ok){ st.streak++; st.cleared++; pts=100*(st.floor+1)+25*Math.min(st.streak-1,4); st.score+=pts; }
+    else { st.streak=0; st.missed.push({q:q,pick:i,floor:st.floor+1}); var d=damage(1); note=d.note; dead=d.dead; }
+    var detail=ok?esc(q.why):'The answer was <b>'+esc(q.opts[q.answer])+'</b>. '+esc(q.why);
+    var rv=$("reveal"); rv.hidden=false; $("actions").innerHTML=""; hud();
+    rv.innerHTML='<div class="verdict '+(ok?"ok":"no")+'">'+(ok?"Monster slain! +"+pts:"It hits you!")+'</div>'+detail+(note?'<div class="note">'+esc(note)+'</div>':"")+'<div class="topic">'+TOPIC[q.topic]+'</div>';
+    narrate(ok?"Nicely done.":(dead?"You collapse...":"You stagger on."));
+    var go=document.createElement("button"); go.type="button"; go.className="btn";
+    if(dead){ go.textContent="See your result"; st.after="lose"; go.addEventListener("click",function(){ finish(false); }); }
+    else { go.textContent="Next room"; st.after="room"; go.addEventListener("click",nextRoom); }
+    $("actions").appendChild(go); saveRun();
+  }
+
+  function nextRoom(){ st.room++; showQ(); }
+
+  /* ---------- Boss (written) ---------- */
+  $("wtext").addEventListener("input",function(){
+    var n=$("wtext").value.trim().split(/\s+/).filter(Boolean).length;
+    $("wcount").textContent=n+(n===1?" word":" words");
+  });
+  $("wsubmit").addEventListener("click",function(){
+    var q=cur(), text=$("wtext").value.trim();
+    if(text.split(/\s+/).filter(Boolean).length<3){ narrate("Write a little more first. A few full sentences."); return; }
+    st.locked=true; $("wtext").readOnly=true; $("wsubmit").hidden=true; inventory();
+    var h=hits(q,text), html='<h4>Mark yourself</h4><p>We ticked the points we spotted by keyword. Adjust honestly, as an examiner would. You need '+q.need+' of '+q.marks+' to defeat the boss.</p>';
+    q.points.forEach(function(p,i){
+      html+='<label><input type="checkbox" data-p="'+i+'"'+(h[i]?" checked":"")+'><span>'+esc(p.t)+(h[i]?'<span class="auto">auto-ticked</span>':'')+'</span></label>';
+    });
+    html+='<div class="tally" id="tally"></div><button class="btn teal" id="wconfirm" type="button">Confirm my marks</button>';
+    $("wms").innerHTML=html; $("wms").hidden=false;
+    function tally(){
+      var n=$("wms").querySelectorAll("input:checked").length, shown=Math.min(n,q.marks);
+      $("tally").innerHTML="Marks: <b>"+shown+" / "+q.marks+"</b> · pass mark "+q.need+(n>=q.need?" · boss will fall":" · not enough yet");
+    }
+    $("wms").addEventListener("change",tally); tally();
+    $("wconfirm").addEventListener("click",function(){
+      var n=$("wms").querySelectorAll("input:checked").length, got=Math.min(n,q.marks), ok=n>=q.need;
+      [].forEach.call($("wms").querySelectorAll("input"),function(x){x.disabled=true;});
+      $("wconfirm").hidden=true; bossResult(ok,got,text);
+    });
+  });
+
+  function bossResult(ok,got,text){
+    var q=cur(), last=st.floor===2, f=FLOORS[st.floor], pts=0, note="", dead=false;
+    if(ok){
+      st.defeated++; st.streak++; pts=500*(st.floor+1)+100*got; st.score+=pts;
+      if(st.hearts<MAXH){ st.hearts++; note="You recover 1 heart."; }
+    } else {
+      st.streak=0; st.missed.push({q:q,got:got,floor:st.floor+1});
+      var d=damage(2); note=d.note; dead=d.dead;
+    }
+    hud();
+    var rv=$("reveal"); rv.hidden=false; $("actions").innerHTML="";
+    rv.innerHTML='<div class="verdict '+(ok?"ok":"no")+'">'+(ok?f.boss+" is defeated! +"+pts:f.boss+" strikes back!")+'</div>You scored '+got+' of '+q.marks+' (pass mark '+q.need+'). '+esc(q.tip)+(note?'<div class="note">'+esc(note)+'</div>':"")+'<div class="topic">'+TOPIC[q.topic]+'</div>';
+    narrate(ok?"The stairs are clear.":(dead?"You collapse...":"You survive, but there is no reward."));
+    var go=document.createElement("button"); go.type="button"; go.className="btn";
+    if(dead){ go.textContent="See your result"; st.after="lose"; go.addEventListener("click",function(){ finish(false); }); }
+    else if(last){ go.textContent=ok?"Claim victory":"Leave the dungeon"; st.after=ok?"win":"escape"; go.addEventListener("click",function(){ finish(true,ok); }); }
+    else if(ok){ go.textContent="Choose a lifeline"; st.after="reward"; go.addEventListener("click",reward); }
+    else { go.textContent="Descend anyway"; st.after="stairs"; go.addEventListener("click",stairs); }
+    $("actions").appendChild(go); saveRun();
+  }
+
+  /* ---------- Reward ---------- */
+  function reward(){
+    st.after="reward";
+    $("run").hidden=true; $("rewardSec").hidden=false;
+    $("rwTitle").textContent=FLOORS[st.floor].boss+" is defeated!";
+    $("rwText").textContent="Choose one lifeline to take down to floor "+(st.floor+2)+". You can hold more than one of the same kind.";
+    var offer=shuffle(LIFEIDS.slice()).slice(0,3);
+    $("picks").innerHTML=offer.map(function(id){
+      var d=LIFE[id]; return '<button type="button" class="pick" data-l="'+id+'"><em>'+(d.passive?"Passive":"Active")+(st.inv[id]?" · you hold "+st.inv[id]:"")+'</em><b>'+d.n+'</b><span>'+esc(d.d)+'</span></button>';
+    }).join("");
+    window.scrollTo(0,0); saveRun();
+  }
+  $("picks").addEventListener("click",function(e){
+    var b=e.target.closest(".pick"); if(!b) return;
+    st.inv[b.getAttribute("data-l")]++;
+    $("rewardSec").hidden=true; $("run").hidden=false; stairs();
+  });
+  function stairs(){ st.floor++; st.room=0; showQ(); window.scrollTo(0,0); }
+
+  /* ---------- End ---------- */
+  function finish(survived,bossWon){
+    clearRun();
+    var bonus=survived&&bossWon?st.hearts*250:0, total=st.score+bonus;
+    $("run").hidden=true; $("rewardSec").hidden=true; $("end").hidden=false; saveBest(total);
+    var t=$("endTitle");
+    if(survived&&bossWon){ t.className="win"; t.textContent="You cleared the dungeon!"; }
+    else if(survived){ t.className="win"; t.textContent="You scraped out alive"; }
+    else { t.className="lose"; t.textContent="Defeated on floor "+(st.floor+1)+(isBoss()?" by "+FLOORS[st.floor].boss:", room "+(st.room+1)); }
+    $("endScore").textContent=total.toLocaleString();
+    $("endMsg").textContent=survived&&bossWon?"Surviving hearts add "+bonus.toLocaleString()+" bonus points.":(survived?"The Chief Examiner beat you on the final answer, but you made it out.":"Every wrong answer below is a revision target for the next run.");
+    $("stats").innerHTML=[["Rooms cleared",st.cleared],["Bosses beaten",st.defeated],["Hearts left",st.hearts]].map(function(s){return '<div class="stat pix"><b>'+s[1]+'</b><span>'+s[0]+'</span></div>';}).join("");
+    var h="";
+    if(st.missed.length){
+      h="<h3>Revise these</h3>"+st.missed.map(function(m){
+        if(m.q.kind==="w") return '<div class="rv pix"><span class="t">Floor '+m.floor+' boss · '+TOPIC[m.q.topic]+' · '+m.got+'/'+m.q.marks+'</span><b>'+esc(m.q.text)+'</b>Mark scheme points:<ul>'+m.q.points.map(function(p){return "<li>"+esc(p.t)+"</li>";}).join("")+'</ul></div>';
+        return '<div class="rv pix"><span class="t">Floor '+m.floor+' · '+TOPIC[m.q.topic]+'</span><b>'+esc(m.q.text)+'</b>Answer: '+esc(m.q.opts[m.q.answer])+'. '+esc(m.q.why)+'</div>';
+      }).join("");
+    } else h="<h3>A flawless run</h3><div class='rv pix'>No wrong answers. Start another run for a fresh set of questions.</div>";
+    $("review").innerHTML=h; window.scrollTo(0,0);
+  }
+
+  /* ---------- Start / resume ---------- */
+  function begin(){ $("intro").hidden=true; $("end").hidden=true; $("rewardSec").hidden=true; $("run").hidden=false; window.scrollTo(0,0); }
+  $("start").addEventListener("click",function(){ newRun(); begin(); showQ(); });
+  $("again").addEventListener("click",function(){ newRun(); begin(); showQ(); });
+  var saved=loadRun();
+  if(saved){ $("cont").hidden=false; $("cont").textContent="Continue: floor "+(saved.floor+1)+", room "+(saved.room+1); }
+  $("cont").addEventListener("click",function(){
+    var r=loadRun(); if(!r){ newRun(); begin(); showQ(); return; }
+    st=r; resetQ(); begin(); hud();
+    /* A room that was already answered resumes at the step after it, so a reload cannot undo damage. */
+    if(st.after==="room"){ nextRoom(); }
+    else if(st.after==="stairs"){ stairs(); }
+    else if(st.after==="reward"){ reward(); }
+    else if(st.after==="win"){ finish(true,true); }
+    else if(st.after==="escape"){ finish(true,false); }
+    else if(st.after==="lose"){ finish(false); }
+    else showQ();
+  });
+})();
+</script>
+
+</body></html>
