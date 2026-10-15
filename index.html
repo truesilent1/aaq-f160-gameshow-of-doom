@@ -66,8 +66,57 @@ button { font:inherit; font-weight:800; cursor:pointer; border:0; border-radius:
 /* room card */
 .room { padding:1.1rem 1.2rem 1.3rem; }
 .enemy { display:flex; gap:.8rem; align-items:center; margin-bottom:.9rem; }
-.sprite { width:3rem; height:3rem; flex:none; display:grid; place-items:center; font-family:var(--f-display); font-weight:700; font-size:1.5rem; border:3px solid var(--torch); background:#2a1500; color:var(--torch); border-radius:4px; }
-.sprite.boss { border-color:var(--boss); background:#1a0833; color:var(--boss); }
+/* stage: stone wall, torch, ground and the two fighters */
+.stage { position:relative; height:clamp(210px,40vw,290px); overflow:hidden; border:3px solid var(--line); border-radius:4px; margin-bottom:.9rem; box-shadow:4px 4px 0 #000a; background:#2a2536; }
+.stage .wall { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+.stage.f1 .wall { filter:hue-rotate(70deg) saturate(.9); }
+.stage.f2 .wall { filter:hue-rotate(-35deg) saturate(1.25) brightness(1.05); }
+.glow { position:absolute; left:50%; top:26%; width:72%; aspect-ratio:1; transform:translate(-50%,-50%); background:radial-gradient(circle,#ff9b3d80 0%,#ff9b3d2c 35%,transparent 68%); animation:glow 2.2s infinite; z-index:1; pointer-events:none; }
+@keyframes glow {
+  0%{opacity:.8;transform:translate(-50%,-50%) scale(1)} 12%{opacity:1;transform:translate(-50%,-50%) scale(1.04)} 24%{opacity:.68;transform:translate(-50%,-50%) scale(.97)}
+  38%{opacity:.95;transform:translate(-50%,-50%) scale(1.03)} 52%{opacity:.74;transform:translate(-50%,-50%) scale(.98)} 70%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}
+  85%{opacity:.82;transform:translate(-50%,-50%) scale(1)} 100%{opacity:.9;transform:translate(-50%,-50%) scale(1.02)} }
+.vig { position:absolute; inset:0; z-index:2; pointer-events:none; background:radial-gradient(ellipse 75% 85% at 50% 30%,transparent 25%,#000a 100%); }
+.ground { position:absolute; left:0; right:0; bottom:0; height:22%; z-index:2; border-top:3px solid #1a1426; background:repeating-linear-gradient(90deg,#2b2238 0 56px,#322842 56px 112px); }
+.torch { position:absolute; left:50%; top:13%; width:clamp(34px,7vw,52px); aspect-ratio:40/90; transform:translateX(-50%); z-index:3; }
+.torch svg { display:block; width:100%; height:100%; overflow:visible; }
+.flame { transform-box:fill-box; transform-origin:50% 100%; animation:flick .8s ease-in-out infinite alternate; }
+.flame.in { animation-duration:.55s; animation-delay:-.25s; }
+@keyframes flick {
+  0%{transform:scale(1,1) rotate(-2deg)} 25%{transform:scale(.9,1.1) rotate(2deg)} 50%{transform:scale(1.06,.93) rotate(-1deg)}
+  75%{transform:scale(.94,1.12) rotate(3deg)} 100%{transform:scale(1.02,.97) rotate(-3deg)} }
+.sp { position:absolute; left:50%; top:4%; width:4px; height:4px; background:#ffb347; opacity:0; animation:rise 1.7s linear infinite; }
+.sp.s2 { left:38%; animation-delay:.6s; --dx:-12px; } .sp.s3 { left:60%; animation-delay:1.1s; --dx:10px; } .sp.s1 { --dx:4px; }
+@keyframes rise { 0%{opacity:0;transform:translate(0,0)} 15%{opacity:1} 100%{opacity:0;transform:translate(var(--dx),-52px)} }
+.tag { position:absolute; top:.5rem; z-index:5; font-family:var(--f-display); font-weight:700; font-size:.8rem; background:#000a; padding:.1rem .55rem; border-radius:3px; letter-spacing:.04em; }
+.tag.l { left:.6rem; color:var(--teal); } .tag.r { right:.6rem; color:var(--torch); }
+.stage.boss .tag.r { color:var(--boss); }
+.actor { position:absolute; bottom:15%; z-index:4; --sz:clamp(84px,17vw,120px); --lx:clamp(70px,34vw,300px); }
+.actor svg { display:block; width:var(--sz); height:var(--sz); animation:bob 1.1s ease-in-out infinite; }
+.actor::after { content:""; position:absolute; left:8%; right:8%; bottom:-5px; height:9px; border-radius:50%; background:#000a; filter:blur(2px); z-index:-1; }
+.hero-a { left:9%; } .enemy-a { right:9%; } .enemy-a svg { animation-delay:-.55s; }
+.stage.boss .enemy-a { --sz:clamp(116px,27vw,176px); }
+@keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+.actor.spawn { animation:spawn .55s ease-out; }
+@keyframes spawn { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+.actor.lunge { animation:lungeR .55s ease-in-out; }
+.actor.lunge-l { animation:lungeL .55s ease-in-out; }
+@keyframes lungeR { 0%,100%{transform:translateX(0)} 40%{transform:translateX(var(--lx))} }
+@keyframes lungeL { 0%,100%{transform:translateX(0)} 40%{transform:translateX(calc(var(--lx) * -1))} }
+.actor.hurt { animation:hurt .4s; }
+.actor.hurt svg { filter:drop-shadow(0 0 8px #ff4d6d) brightness(1.7); }
+@keyframes hurt { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 40%{transform:translateX(7px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(4px)} }
+.actor.ward svg { filter:drop-shadow(0 0 10px #36e0c0) brightness(1.3); }
+.actor.die { opacity:0; animation:die .7s ease-in forwards; }
+.hero-a.die { animation-name:dieHero; }
+@keyframes die { from{opacity:1;transform:translateY(0) rotate(0)} to{opacity:0;transform:translateY(26px) rotate(9deg)} }
+@keyframes dieHero { from{opacity:1;transform:translateY(0) rotate(0)} to{opacity:.25;transform:translateY(22px) rotate(-12deg)} }
+.actor.shielded::before { content:""; position:absolute; inset:-6% -14%; border:3px solid #36e0c0aa; border-radius:50%; background:#36e0c01f; animation:pulse 1.2s ease-in-out infinite alternate; }
+@keyframes pulse { from{opacity:.55} to{opacity:1} }
+.pop { position:absolute; top:30%; z-index:6; font-family:var(--f-display); font-weight:700; font-size:1.5rem; text-shadow:2px 2px 0 #000; animation:pop 1.1s forwards; pointer-events:none; }
+.pop.l { left:14%; } .pop.r { right:14%; } .pop.gold { color:var(--gold); } .pop.red { color:var(--red); } .pop.teal { color:var(--teal); }
+@keyframes pop { 0%{opacity:0;transform:translateY(10px)} 15%{opacity:1} 100%{opacity:0;transform:translateY(-42px)} }
+@media (prefers-reduced-motion: reduce) { .flame,.glow,.sp,.actor svg,.actor,.actor.shielded::before { animation:none !important; } .sp { display:none; } }
 .enemy b { font-family:var(--f-display); font-size:1.2rem; display:block; line-height:1.1; }
 .enemy small { font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); font-weight:800; }
 .tagboss { color:var(--boss); }
@@ -172,8 +221,41 @@ textarea:read-only { opacity:.85; }
    <div class="pts"><small>Score</small><span id="score">0</span></div>
   </div>
   <div class="map" id="map" aria-label="Floor map"></div>
+  <div class="stage f0" id="stage" aria-hidden="true">
+   <svg class="wall" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+    <defs>
+     <pattern id="brk" width="80" height="48" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="40" height="24" fill="#3b3649" stroke="#1f1a2b" stroke-width="2"/>
+      <rect x="40" y="0" width="40" height="24" fill="#443e55" stroke="#1f1a2b" stroke-width="2"/>
+      <rect x="-20" y="24" width="40" height="24" fill="#403a50" stroke="#1f1a2b" stroke-width="2"/>
+      <rect x="20" y="24" width="40" height="24" fill="#38334a" stroke="#1f1a2b" stroke-width="2"/>
+      <rect x="60" y="24" width="40" height="24" fill="#463f58" stroke="#1f1a2b" stroke-width="2"/>
+     </pattern>
+    </defs>
+    <rect width="400" height="240" fill="url(#brk)"/>
+    <path d="M318 58 l9 15 l-7 11 l10 15 l-5 10" stroke="#1f1a2b" stroke-width="2" fill="none"/>
+    <path d="M70 120 l-8 12 l7 9 l-6 12" stroke="#1f1a2b" stroke-width="2" fill="none"/>
+    <path d="M0 200 q10 -14 20 -4 q8 -12 18 0 q9 -10 16 4z" fill="#2f5a3a" opacity=".55"/>
+    <path d="M360 205 q8 -12 18 -3 q7 -10 22 2 v12 h-40z" fill="#2f5a3a" opacity=".55"/>
+   </svg>
+   <div class="glow"></div>
+   <div class="vig"></div>
+   <div class="ground"></div>
+   <div class="torch">
+    <svg viewBox="0 0 40 90">
+     <rect x="17" y="38" width="6" height="48" fill="#5a4030" stroke="#1a1426" stroke-width="2"/>
+     <path d="M9 36 L31 36 L26 52 L14 52Z" fill="#8a90a6" stroke="#1a1426" stroke-width="2"/>
+     <path class="flame" d="M20 2 C29 15 33 24 29 33 C27 38 13 38 11 33 C7 24 12 15 20 2Z" fill="#ff7a1a"/>
+     <path class="flame in" d="M20 15 C25 23 26 29 24 34 C22 37 18 37 16 34 C14 29 15 23 20 15Z" fill="#ffd166"/>
+    </svg>
+    <i class="sp s1"></i><i class="sp s2"></i><i class="sp s3"></i>
+   </div>
+   <span class="tag l" id="tagL">YOU</span><span class="tag r" id="tagR"></span>
+   <div class="actor hero-a idle" id="heroBox"></div>
+   <div class="actor enemy-a idle" id="enemyBox"></div>
+  </div>
   <div class="room pix" id="room">
-   <div class="enemy"><div class="sprite" id="sprite"></div><div><small id="etag"></small><b id="ename"></b></div></div>
+   <div class="enemy"><div><small id="etag"></small><b id="ename"></b></div></div>
    <div class="scen" id="wscen" hidden></div>
    <p class="q-text" id="qtext"></p>
    <div class="opts" id="opts"></div>
@@ -397,6 +479,69 @@ textarea:read-only { opacity:.85; }
   }
   function resetQ(){ st.locked=false; st.struck=[]; st.mate=null; st.pollRes=null; st.sheetShown=null; }
 
+  /* ---------- Stage: pixel sprites, 12 x 12 each. Letters index PAL; "." is empty. ---------- */
+  var PAL={k:"#1a1426",w:"#f4f1e6",r:"#e0344f",o:"#ff9b3d",y:"#ffd166",g:"#4ade80",G:"#1f8f4f",b:"#4c8dff",p:"#9a5bff",P:"#5b45a8",s:"#f2c9a0",n:"#8a5a3a",c:"#aab3c8",C:"#4a5068",t:"#36e0c0"};
+  var SPR={
+    hero:{rows:["....nnnn....","...nnnnnn...","...nssssn.c.","..nskssksnc.","...ssssss.c.","....ssss..c.","..bbbbbbb.y.",".bbbbbbbbbs.",".bbbbbbbbb..","..bbbbbbb...","..bb...bb...","..nn...nn..."]},
+    m1:{rows:["............","............","....kkkk....","...kggggk...","..kggggggk..",".kgwkggwkggk",".kggggggggk.",".kgggkkgggk.","kggggggggggk","kGGGGGGGGGGk",".kkkkkkkkkk.","............"]},
+    m2:{rows:["............","..kkkkkkkk..",".knnnnnnnnk.",".knnynnynnk.","kkkkkkkkkkkk","krwrwrwrwrrk","kkkkkkkkkkkk","knnnnnnnnnnk","knyynnnnyynk","knnnnnnnnnnk","kkkkkkkkkkkk","............"]},
+    m3:{pal:{w:"#cfe0ff"},rows:["....kkkk....","...kwwwwk...","..kwwwwwwk..","..kwkwwkwk..","..kwwwwwwk..","..kwwkkwwk..","..kwwwwwwk..","..kwwwwwwk..","..kwwwwwwk..","..kwwkwwkwk.","...k.k.k.k..","............"]},
+    m4:{rows:["............","............","..kk...kk...",".kppk.kppk..",".knnnnnnnk..",".knrnnnrnnk.","pknnnnnnnnk.",".kknnnnnnkk.","..knnnnnnnnk","..kknnnnnnkp","...kk.kk.kk.","............"]},
+    m5:{rows:["..r......r..","..rr....rr..","...kppppk...","..kppppppk..","..kpypppypk.","..kppppppk..","..kpwwwwpk..","...kppppk...","..kppppppk..",".kppkppkppk.","..kk.kk.kk..","............"]},
+    m6:{rows:["....kkkk....","...kPPPPk...","..kPPPPPPk..","..kPkkkkPk..","..kPkyykPk..","..kPkkkkPk..","..kPPPPPPk..",".kPPPPPPPPk.",".kPPPPPPPPk.","kPPkPPPPkPPk","kk.kPPPPk.kk","............"]},
+    b0:{rows:["...kkkkkk...","..kcccccck..","..kcyccyck..","..kcccccck..",".kkcccccckk.","kcccckkcccck","kcccccccccck","kccCCCCCCcck",".kcccccccck.",".kcck..kcck.",".kkkk..kkkk.","............"]},
+    b1:{rows:["..kk....kk..","..krk..krk..","..krrkkrrk..",".krrrrrrrrk.",".krwkrrwkrrk",".krrrrrrrrk.",".krroooorrk.",".krrrrrrrrk.","kkrrrrrrrrkk","krkrrrrrrkrk","kk.krrrrk.kk","............"]},
+    b2:{rows:["...kkkkkk...","..kwwwwwwk..","..kwwwwwwk..","..kssssssk..","..kbksskbk..","..kssssssk..","..kssrrssk..",".kkkkkkkkkk.",".kCCCCCCCCk.",".kCCwwwwCCk.",".kCCwwwwCCk.",".kCCCCCCCCk."]}
+  };
+  function sprite(def){
+    var pal={}, k; for(k in PAL) pal[k]=PAL[k]; if(def.pal) for(k in def.pal) pal[k]=def.pal[k];
+    var out="";
+    def.rows.forEach(function(row,y){
+      var x=0;
+      while(x<12){
+        var ch=row.charAt(x);
+        if(ch==="."){ x++; continue; }
+        var s=x; while(x<12&&row.charAt(x)===ch) x++;
+        out+='<rect x="'+s+'" y="'+y+'" width="'+(x-s)+'" height="1" fill="'+pal[ch]+'"/>';
+      }
+    });
+    return '<svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">'+out+'</svg>';
+  }
+  var timers=[];
+  function later(fn,ms){ timers.push(setTimeout(fn,ms)); }
+  function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+  function stageSet(){
+    clearTimers();
+    var boss=isBoss(), q=cur();
+    $("stage").className="stage f"+st.floor+(boss?" boss":"");
+    $("heroBox").innerHTML=sprite(SPR.hero);
+    $("heroBox").className="actor hero-a idle"+(st.shield?" shielded":"");
+    $("enemyBox").innerHTML=sprite(boss?SPR["b"+st.floor]:SPR["m"+q.topic]);
+    $("enemyBox").className="actor enemy-a idle spawn";
+    $("tagR").textContent=boss?FLOORS[st.floor].boss:MONS[q.topic];
+    later(function(){ $("enemyBox").classList.remove("spawn"); },600);
+  }
+  function pop(text,color,side){
+    var p=document.createElement("span"); p.className="pop "+color+" "+side; p.textContent=text;
+    $("stage").appendChild(p); setTimeout(function(){ if(p.parentNode) p.parentNode.removeChild(p); },1150);
+  }
+  /* Plays one exchange: you strike and the enemy falls, or the enemy strikes and you take the hit (or the shield does). */
+  function fight(ok,blocked,dead,boss,pts){
+    var h=$("heroBox"), e=$("enemyBox"); clearTimers();
+    if(ok){
+      h.classList.add("lunge");
+      later(function(){ e.classList.add("hurt"); pop("+"+pts,"gold","r"); },280);
+      later(function(){ h.classList.remove("lunge"); e.classList.remove("hurt"); e.classList.add("die"); },640);
+    } else {
+      e.classList.add("lunge-l");
+      later(function(){
+        if(blocked){ h.classList.add("ward"); pop("BLOCKED","teal","l"); }
+        else { h.classList.add("hurt"); pop("-"+(boss?2:1)+" ♥","red","l"); }
+      },280);
+      later(function(){ e.classList.remove("lunge-l"); h.classList.remove("hurt"); h.classList.remove("ward"); if(dead) h.classList.add("die"); },640);
+    }
+  }
+
   /* ---------- HUD ---------- */
   function hud(){
     var h="";
@@ -405,6 +550,7 @@ textarea:read-only { opacity:.85; }
     $("hearts").innerHTML=h;
     $("floor").innerHTML='<small>Floor '+(st.floor+1)+' of 3</small>'+esc(FLOORS[st.floor].name);
     $("score").textContent=st.score.toLocaleString();
+    $("heroBox").classList.toggle("shielded",!!st.shield);
     var m="";
     for(var r=0;r<5;r++){
       var cls="node"+(r===4?" boss":"")+(r<st.room?" done":"")+(r===st.room?" cur":"");
@@ -433,7 +579,7 @@ textarea:read-only { opacity:.85; }
     resetQ(); st.after=null;
     var q=cur(), boss=isBoss(), written=q.kind==="w", f=FLOORS[st.floor];
     hud();
-    $("sprite").className="sprite"+(boss?" boss":""); $("sprite").textContent=boss?"B":MONS[q.topic][0];
+    stageSet();
     $("etag").innerHTML=boss?'<span class="tagboss">Boss · '+q.marks+' marks · written</span>':"Room "+(st.room+1)+" of 5 · "+TOPIC[q.topic];
     $("ename").textContent=boss?f.boss:MONS[q.topic];
     $("qtext").textContent=q.text;
@@ -528,7 +674,7 @@ textarea:read-only { opacity:.85; }
 
   /* ---------- Damage ---------- */
   function damage(n){
-    if(st.shield){ st.shield=false; return {dead:false,note:"Your shield absorbed the hit. No hearts lost."}; }
+    if(st.shield){ st.shield=false; return {dead:false,blocked:true,note:"Your shield absorbed the hit. No hearts lost."}; }
     st.hearts-=n;
     if(st.hearts<=0){
       if(st.inv.wind>0){ st.inv.wind--; st.hearts=1; return {dead:false,note:"Second Wind! You get back up with 1 heart."}; }
@@ -541,11 +687,11 @@ textarea:read-only { opacity:.85; }
   function answerMC(i){
     var q=cur(); st.locked=true; inventory();
     var ok=i===q.answer; drawOpts(true,i);
-    var pts=0,note="",dead=false;
+    var pts=0,note="",dead=false,blocked=false;
     if(ok){ st.streak++; st.cleared++; pts=100*(st.floor+1)+25*Math.min(st.streak-1,4); st.score+=pts; }
-    else { st.streak=0; st.missed.push({q:q,pick:i,floor:st.floor+1}); var d=damage(1); note=d.note; dead=d.dead; }
+    else { st.streak=0; st.missed.push({q:q,pick:i,floor:st.floor+1}); var d=damage(1); note=d.note; dead=d.dead; blocked=!!d.blocked; }
     var detail=ok?esc(q.why):'The answer was <b>'+esc(q.opts[q.answer])+'</b>. '+esc(q.why);
-    var rv=$("reveal"); rv.hidden=false; $("actions").innerHTML=""; hud();
+    var rv=$("reveal"); rv.hidden=false; $("actions").innerHTML=""; hud(); fight(ok,blocked,dead,false,pts);
     rv.innerHTML='<div class="verdict '+(ok?"ok":"no")+'">'+(ok?"Monster slain! +"+pts:"It hits you!")+'</div>'+detail+(note?'<div class="note">'+esc(note)+'</div>':"")+'<div class="topic">'+TOPIC[q.topic]+'</div>';
     narrate(ok?"Nicely done.":(dead?"You collapse...":"You stagger on."));
     var go=document.createElement("button"); go.type="button"; go.className="btn";
@@ -584,16 +730,16 @@ textarea:read-only { opacity:.85; }
   });
 
   function bossResult(ok,got,text){
-    var q=cur(), last=st.floor===2, f=FLOORS[st.floor], pts=0, note="", dead=false;
+    var q=cur(), last=st.floor===2, f=FLOORS[st.floor], pts=0, note="", dead=false, blocked=false;
     if(ok){
       st.defeated++; st.streak++; pts=500*(st.floor+1)+100*got; st.score+=pts;
       if(st.hearts<MAXH){ st.hearts++; note="You recover 1 heart."; }
     } else {
       st.streak=0; st.missed.push({q:q,got:got,floor:st.floor+1});
-      var d=damage(2); note=d.note; dead=d.dead;
+      var d=damage(2); note=d.note; dead=d.dead; blocked=!!d.blocked;
     }
     hud();
-    var rv=$("reveal"); rv.hidden=false; $("actions").innerHTML="";
+    var rv=$("reveal"); rv.hidden=false; $("actions").innerHTML=""; fight(ok,blocked,dead,true,pts);
     rv.innerHTML='<div class="verdict '+(ok?"ok":"no")+'">'+(ok?f.boss+" is defeated! +"+pts:f.boss+" strikes back!")+'</div>You scored '+got+' of '+q.marks+' (pass mark '+q.need+'). '+esc(q.tip)+(note?'<div class="note">'+esc(note)+'</div>':"")+'<div class="topic">'+TOPIC[q.topic]+'</div>';
     narrate(ok?"The stairs are clear.":(dead?"You collapse...":"You survive, but there is no reward."));
     var go=document.createElement("button"); go.type="button"; go.className="btn";
